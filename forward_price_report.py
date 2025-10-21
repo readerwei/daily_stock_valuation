@@ -3,6 +3,7 @@
 # and then sends an email with the generated report.
 
 import pandas as pd
+import numpy as np
 from clickhouse_driver import Client
 from datetime import date
 import smtplib
@@ -19,21 +20,30 @@ def get_clickhouse_client(host='192.168.1.36', port=9000, user='default', passwo
     return Client(host=host, port=port, user=user, password=password)
 
 def get_forward_price_estimates():
-    """Retrieves the latest estimated forward price ranges for all tickers from ClickHouse."""
+    """Retrieves the latest financial data for all tickers from ClickHouse to calculate PEG ratio."""
     client = get_clickhouse_client()
     query = """
     SELECT
         ticker,
         argMax(estimated_forward_price_low, date) as estimated_forward_price_low,
         argMax(estimated_forward_price_high, date) as estimated_forward_price_high,
+        argMax(forward_pe, date) as forward_pe,
+        argMax(forward_eps, date) as forward_eps,
+        argMax(trailing_eps, date) as trailing_eps,
         max(date) as latest_date
     FROM default.stock_financial_data
     GROUP BY ticker
-    HAVING estimated_forward_price_low IS NOT NULL AND estimated_forward_price_high IS NOT NULL
+    HAVING
+        estimated_forward_price_low IS NOT NULL AND
+        estimated_forward_price_high IS NOT NULL AND
+        forward_pe IS NOT NULL AND
+        forward_eps IS NOT NULL AND
+        trailing_eps IS NOT NULL AND
+        trailing_eps > 0
     ORDER BY ticker
     """
     result = client.execute(query, with_column_types=True)
-    
+
     columns = [col[0] for col in result[1]]
     df = pd.DataFrame(result[0], columns=columns)
     return df
@@ -92,17 +102,37 @@ def send_report_email(html_report):
 
 if __name__ == "__main__":
     print("--- Generating Forward Price Estimate Report ---")
-    
+
     report_df = get_forward_price_estimates()
-    
+
     if report_df.empty:
-        print("No data found in ClickHouse. Exiting.")
+        print("No data with required fields found in ClickHouse. Exiting.")
     else:
+        # Calculate EPS Growth, handle non-positive trailing_eps
+        report_df['eps_growth'] = np.where(
+            report_df['trailing_eps'] > 0,
+            (report_df['forward_eps'] - report_df['trailing_eps']) / report_df['trailing_eps'],
+            np.nan
+        )
+
+        # Calculate PEG Ratio, handle non-positive growth rates
+        report_df['peg_ratio'] = np.where(
+            report_df['eps_growth'] > 0,
+            report_df['forward_pe'] / (report_df['eps_growth'] * 100),
+            np.nan
+        )
+
         report_df = add_current_price(report_df)
-        
+
+        # Select and reorder columns for the report
+        report_df = report_df[[
+            'ticker', 'current_price', 'position', 'peg_ratio',
+            'estimated_forward_price_low', 'estimated_forward_price_high', 'latest_date'
+        ]]
+
         report_df = report_df.round(2)
         html_table = report_df.to_html(index=False)
-        
+
         send_report_email(html_table)
-        
+
         print("--- Report generation complete ---")
