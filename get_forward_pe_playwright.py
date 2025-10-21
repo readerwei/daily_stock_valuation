@@ -142,7 +142,7 @@ def get_tickers_from_yaml(yaml_file):
     """Reads a list of tickers from a YAML configuration file."""
     with open(yaml_file, 'r') as file:
         data = yaml.safe_load(file)
-    return [ticker.strip() for ticker in data.get('custom_asset_list', '').split(',')]
+    return [ticker.strip() for ticker in data['alpaca']['custom_asset_list'].split(',')]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch quarterly forward PE history for a stock ticker using Playwright.")
