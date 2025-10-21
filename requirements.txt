@@ -1,0 +1,11 @@
+yfinance
+PyYAML
+pandas
+clickhouse-driver
+playwright
+beautifulsoup4
+alpaca_trade_api
+zipline
+trading_calendars
+python-dotenv
+talib
