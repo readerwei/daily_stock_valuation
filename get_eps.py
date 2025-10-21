@@ -48,7 +48,8 @@ def create_stock_data_table(client, database='default', table='stock_financial_d
         `forward_pe_perc_25` Nullable(Float64),
         `forward_pe_perc_75` Nullable(Float64),
         `estimated_forward_price_low` Nullable(Float64),
-        `estimated_forward_price_high` Nullable(Float64)
+        `estimated_forward_price_high` Nullable(Float64),
+        `peg_ratio` Nullable(Float64)
     )
     ENGINE = MergeTree()
     PARTITION BY toYYYYMM(date)
@@ -204,7 +205,8 @@ def get_eps_data(tickers, pe_period="5y"):
                 'forward_pe_perc_75': pe_perc_75,
                 'estimated_forward_price_low': estimated_price_low,
                 'estimated_forward_price_high': estimated_price_high,
-                **analyst_estimates
+                **analyst_estimates,
+                'peg_ratio': info.get('pegRatio')
             }
             all_data.append(row)
 
@@ -252,7 +254,8 @@ if __name__ == "__main__":
                         'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y',
                         'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y',
                         'forward_pe_perc_25', 'forward_pe_perc_75',
-                        'estimated_forward_price_low', 'estimated_forward_price_high'
+                        'estimated_forward_price_low', 'estimated_forward_price_high',
+                        'peg_ratio'
                     ]
                     
                     data_to_insert = []
