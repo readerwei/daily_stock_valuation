@@ -206,7 +206,7 @@ def get_eps_data(tickers, pe_period="5y"):
                 'estimated_forward_price_low': estimated_price_low,
                 'estimated_forward_price_high': estimated_price_high,
                 **analyst_estimates,
-                'peg_ratio': info.get('pegRatio')
+                'peg_ratio': info.get('trailingPegRatio')
             }
             all_data.append(row)
 
