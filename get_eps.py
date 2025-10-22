@@ -50,6 +50,7 @@ def create_stock_data_table(client, database='default', table='stock_financial_d
         `analyst_eps_range_high_p1y` Nullable(Float64),
         `analyst_eps_range_avg_p1y` Nullable(Float64),
         `forward_pe_perc_25` Nullable(Float64),
+        `forward_pe_perc_50` Nullable(Float64),
         `forward_pe_perc_75` Nullable(Float64),
         `estimated_forward_price_low` Nullable(Float64),
         `estimated_forward_price_high` Nullable(Float64),
@@ -62,23 +63,24 @@ def create_stock_data_table(client, database='default', table='stock_financial_d
     client.execute(create_table_query)
 
 def get_historical_forward_pe_range_from_clickhouse(client, ticker):
-    """Retrieves the 25th and 75th percentile of historical forward P/E from ClickHouse."""
+    """Retrieves the 25th, 50th and 75th percentile of historical forward P/E from ClickHouse."""
     query = f"SELECT forward_pe FROM default.stock_forward_pe_history WHERE ticker = '{ticker}' AND forward_pe IS NOT NULL"
     try:
         result = client.execute(query)
         if not result:
-            return None, None
+            return None, None, None
         
         pe_estimates = [row[0] for row in result]
         if len(pe_estimates) < 4:
-            return None, None
+            return None, None, None
 
         low = np.percentile(pe_estimates, 25)
+        mid = np.percentile(pe_estimates, 50)
         high = np.percentile(pe_estimates, 75)
-        return low, high
+        return low, mid, high
     except Exception as e:
         print(f"Error querying historical Forward PE for {ticker}: {e}")
-        return None, None
+        return None, None, None
 
 def delete_data_for_date(client, date, database='default', table='stock_financial_data'):
     """Deletes data for a specific date to avoid duplicates."""
@@ -177,7 +179,7 @@ def get_eps_data(tickers, pe_period="5y"):
             
             pe_min, pe_max = get_historical_pe_range(ticker, period=pe_period)
             
-            pe_perc_25, pe_perc_75 = get_historical_forward_pe_range_from_clickhouse(client, ticker)
+            pe_perc_25, pe_perc_50, pe_perc_75 = get_historical_forward_pe_range_from_clickhouse(client, ticker)
             
             forward_eps = info.get('forwardEps')
             estimated_price_low = None
@@ -207,6 +209,7 @@ def get_eps_data(tickers, pe_period="5y"):
                 'pe_range_low_5y': pe_min,
                 'pe_range_high_5y': pe_max,
                 'forward_pe_perc_25': pe_perc_25,
+                'forward_pe_perc_50': pe_perc_50,
                 'forward_pe_perc_75': pe_perc_75,
                 'estimated_forward_price_low': estimated_price_low,
                 'estimated_forward_price_high': estimated_price_high,
@@ -258,7 +261,7 @@ if __name__ == "__main__":
                         'analyst_eps_range_low_p1q', 'analyst_eps_range_high_p1q', 'analyst_eps_range_avg_p1q',
                         'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y', 'analyst_eps_range_avg_0y',
                         'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y', 'analyst_eps_range_avg_p1y',
-                        'forward_pe_perc_25', 'forward_pe_perc_75',
+                        'forward_pe_perc_25', 'forward_pe_perc_50', 'forward_pe_perc_75',
                         'estimated_forward_price_low', 'estimated_forward_price_high',
                         'peg_ratio'
                     ]
