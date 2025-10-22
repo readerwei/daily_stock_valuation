@@ -11,7 +11,7 @@ The `get_eps.py` script is a powerful tool for gathering financial metrics for a
 - **Comprehensive Data Retrieval:** Fetches a wide range of financial data, including:
   - Trailing and forward Earnings Per Share (EPS)
   - Trailing and forward Price-to-Earnings (P/E) ratios
-  - Analyst EPS estimates (low and high for current and next quarter/year)
+  - Analyst EPS estimates (low, high, and average for current and next quarter/year)
 - **Historical P/E Range:** Calculates the 5-year historical P/E range for each stock based on historical price and earnings data.
 - **ClickHouse Integration:** Stores the collected data in a ClickHouse database for future analysis. It automatically creates the database and table if they don't exist.
 - **Configurable Ticker List:** The list of stock tickers is managed in the `zipline.yaml` file, making it easy to add or remove stocks.
@@ -60,12 +60,16 @@ CREATE TABLE default.stock_financial_data
     `pe_range_high_5y` Nullable(Float64),
     `analyst_eps_range_low_0q` Nullable(Float64),
     `analyst_eps_range_high_0q` Nullable(Float64),
+    `analyst_eps_range_avg_0q` Nullable(Float64),
     `analyst_eps_range_low_p1q` Nullable(Float64),
     `analyst_eps_range_high_p1q` Nullable(Float64),
+    `analyst_eps_range_avg_p1q` Nullable(Float64),
     `analyst_eps_range_low_0y` Nullable(Float64),
     `analyst_eps_range_high_0y` Nullable(Float64),
+    `analyst_eps_range_avg_0y` Nullable(Float64),
     `analyst_eps_range_low_p1y` Nullable(Float64),
-    `analyst_eps_range_high_p1y` Nullable(Float64)
+    `analyst_eps_range_high_p1y` Nullable(Float64),
+    `analyst_eps_range_avg_p1y` Nullable(Float64)
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(date)

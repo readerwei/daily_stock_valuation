@@ -8,7 +8,7 @@ The project is organized around several Python scripts, each serving a distinct 
 
 ### `get_eps.py` Script
 
-*   **Purpose:** Fetches comprehensive financial data (Earnings Per Share, Price-to-Earnings ratios, analyst estimates, historical P/E ranges) for a list of stock tickers.
+*   **Purpose:** Fetches comprehensive financial data (Earnings Per Share, Price-to-Earnings ratios, analyst estimates including low, high, and average, historical P/E ranges) for a list of stock tickers.
 *   **Data Sources:** Utilizes `yfinance` to retrieve current stock information and historical financial statements from Yahoo Finance. It also queries the ClickHouse database for historical forward P/E percentiles (from `stock_forward_pe_history` table).
 *   **Calculations:** Calculates Trailing Twelve Months (TTM) EPS and determines historical P/E ranges (minimum and maximum over a 5-year period). It also estimates forward prices based on forward EPS and historical forward P/E percentiles.
 *   **Database Interaction:** Connects to a ClickHouse database, automatically creates the `stock_financial_data` table if it doesn't exist, deletes existing data for the current date to prevent duplicates, and inserts the newly fetched and calculated data.
@@ -116,12 +116,16 @@ CREATE TABLE default.stock_financial_data
     `pe_range_high_5y` Nullable(Float64),
     `analyst_eps_range_low_0q` Nullable(Float64),
     `analyst_eps_range_high_0q` Nullable(Float64),
+    `analyst_eps_range_avg_0q` Nullable(Float64),
     `analyst_eps_range_low_p1q` Nullable(Float64),
     `analyst_eps_range_high_p1q` Nullable(Float64),
+    `analyst_eps_range_avg_p1q` Nullable(Float64),
     `analyst_eps_range_low_0y` Nullable(Float64),
     `analyst_eps_range_high_0y` Nullable(Float64),
+    `analyst_eps_range_avg_0y` Nullable(Float64),
     `analyst_eps_range_low_p1y` Nullable(Float64),
     `analyst_eps_range_high_p1y` Nullable(Float64),
+    `analyst_eps_range_avg_p1y` Nullable(Float64),
     `forward_pe_perc_25` Nullable(Float64),
     `forward_pe_perc_75` Nullable(Float64),
     `estimated_forward_price_low` Nullable(Float64),
