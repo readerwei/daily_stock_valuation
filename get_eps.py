@@ -39,12 +39,16 @@ def create_stock_data_table(client, database='default', table='stock_financial_d
         `pe_range_high_5y` Nullable(Float64),
         `analyst_eps_range_low_0q` Nullable(Float64),
         `analyst_eps_range_high_0q` Nullable(Float64),
+        `analyst_eps_range_avg_0q` Nullable(Float64),
         `analyst_eps_range_low_p1q` Nullable(Float64),
         `analyst_eps_range_high_p1q` Nullable(Float64),
+        `analyst_eps_range_avg_p1q` Nullable(Float64),
         `analyst_eps_range_low_0y` Nullable(Float64),
         `analyst_eps_range_high_0y` Nullable(Float64),
+        `analyst_eps_range_avg_0y` Nullable(Float64),
         `analyst_eps_range_low_p1y` Nullable(Float64),
         `analyst_eps_range_high_p1y` Nullable(Float64),
+        `analyst_eps_range_avg_p1y` Nullable(Float64),
         `forward_pe_perc_25` Nullable(Float64),
         `forward_pe_perc_75` Nullable(Float64),
         `estimated_forward_price_low` Nullable(Float64),
@@ -191,6 +195,7 @@ def get_eps_data(tickers, pe_period="5y"):
                     period_name = period.replace('+', 'p')
                     analyst_estimates[f'analyst_eps_range_low_{period_name}'] = estimates.get('low')
                     analyst_estimates[f'analyst_eps_range_high_{period_name}'] = estimates.get('high')
+                    analyst_estimates[f'analyst_eps_range_avg_{period_name}'] = estimates.get('avg')
 
             row = {
                 'ticker': ticker,
@@ -249,10 +254,10 @@ if __name__ == "__main__":
                     columns = [
                         'ticker', 'date', 'trailing_eps', 'forward_eps', 'trailing_pe', 'forward_pe',
                         'pe_range_low_5y', 'pe_range_high_5y',
-                        'analyst_eps_range_low_0q', 'analyst_eps_range_high_0q',
-                        'analyst_eps_range_low_p1q', 'analyst_eps_range_high_p1q',
-                        'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y',
-                        'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y',
+                        'analyst_eps_range_low_0q', 'analyst_eps_range_high_0q', 'analyst_eps_range_avg_0q',
+                        'analyst_eps_range_low_p1q', 'analyst_eps_range_high_p1q', 'analyst_eps_range_avg_p1q',
+                        'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y', 'analyst_eps_range_avg_0y',
+                        'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y', 'analyst_eps_range_avg_p1y',
                         'forward_pe_perc_25', 'forward_pe_perc_75',
                         'estimated_forward_price_low', 'estimated_forward_price_high',
                         'peg_ratio'
