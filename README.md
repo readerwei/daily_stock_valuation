@@ -134,3 +134,10 @@ ENGINE = ReplacingMergeTree()
 PARTITION BY toYYYYMM(date)
 ORDER BY (ticker, date);
 ```
+
+## `forward_price_report.py` Script
+
+*   **Purpose:** Generates a report comparing estimated forward prices (including 1yr low and high) with current market prices for stocks, and then emails this report.
+*   **Data Retrieval:** Fetches estimated forward price ranges from the `stock_financial_data` table in the ClickHouse database. Current stock prices are obtained from Yahoo Finance using `yfinance`.
+*   **Analysis:** For each stock, it determines whether its current market price is "Below," "Above," or "Within" its estimated forward price range.
+*   **Reporting & Emailing:** Compiles the analysis into an HTML table and sends it as an email report via SSL SMTP. Email credentials (`EMAIL_PASS`) are loaded from environment variables.
