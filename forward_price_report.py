@@ -30,6 +30,9 @@ def get_forward_price_estimates():
         argMax(forward_pe, date) as forward_pe,
         argMax(forward_eps, date) as forward_eps,
         argMax(trailing_eps, date) as trailing_eps,
+        argMax(forward_pe_perc_25, date) as forward_pe_perc_25,
+        argMax(forward_pe_perc_50, date) as forward_pe_perc_50,
+        argMax(analyst_eps_range_avg_p1y, date) as analyst_eps_range_avg_p1y,
         max(date) as latest_date
     FROM default.stock_financial_data
     GROUP BY ticker
@@ -39,7 +42,10 @@ def get_forward_price_estimates():
         forward_pe IS NOT NULL AND
         forward_eps IS NOT NULL AND
         trailing_eps IS NOT NULL AND
-        trailing_eps > 0
+        trailing_eps > 0 AND
+        forward_pe_perc_25 IS NOT NULL AND
+        forward_pe_perc_50 IS NOT NULL AND
+        analyst_eps_range_avg_p1y IS NOT NULL
     ORDER BY ticker
     """
     result = client.execute(query, with_column_types=True)
@@ -84,7 +90,7 @@ def send_report_email(html_report):
     PASS = os.getenv("EMAIL_PASS")
 
     msg = MIMEMultipart(_subtype='related')
-    msg["SUBJECT"] = f"Forward Price Estimate Report - {date.today()}"
+    msg["SUBJECT"] = f"Forward Price Estimate Report (with 1yr High) - {date.today()}"
     
     title = f"<h2><b>Estimated Forward Price Report for {date.today()}</b></h2>"
     part1 = MIMEText(title + html_report, 'html')
@@ -122,12 +128,20 @@ if __name__ == "__main__":
             np.nan
         )
 
+        # Calculate estimated 1yr forward price high
+        report_df['estimated_1yr_forward_price_high'] = report_df['forward_pe_perc_50'] * report_df['analyst_eps_range_avg_p1y']
+
+        # Calculate estimated 1yr forward price low
+        report_df['estimated_1yr_forward_price_low'] = report_df['forward_pe_perc_25'] * report_df['analyst_eps_range_avg_p1y']
+
         report_df = add_current_price(report_df)
 
         # Select and reorder columns for the report
         report_df = report_df[[
-            'ticker', 'current_price', 'position', 'peg_ratio',
-            'estimated_forward_price_low', 'estimated_forward_price_high', 'latest_date'
+            'ticker', 'current_price', 'position',
+            'estimated_forward_price_low', 'estimated_forward_price_high',
+            'estimated_1yr_forward_price_low', 'estimated_1yr_forward_price_high',
+            'peg_ratio', 'latest_date'
         ]]
 
         report_df = report_df.round(2)
