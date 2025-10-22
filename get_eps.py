@@ -257,13 +257,17 @@ if __name__ == "__main__":
                     columns = [
                         'ticker', 'date', 'trailing_eps', 'forward_eps', 'trailing_pe', 'forward_pe',
                         'pe_range_low_5y', 'pe_range_high_5y',
-                        'analyst_eps_range_low_0q', 'analyst_eps_range_high_0q', 'analyst_eps_range_avg_0q',
-                        'analyst_eps_range_low_p1q', 'analyst_eps_range_high_p1q', 'analyst_eps_range_avg_p1q',
-                        'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y', 'analyst_eps_range_avg_0y',
-                        'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y', 'analyst_eps_range_avg_p1y',
+                        'analyst_eps_range_low_0q', 'analyst_eps_range_high_0q',
+                        'analyst_eps_range_low_p1q', 'analyst_eps_range_high_p1q',
+                        'analyst_eps_range_low_0y', 'analyst_eps_range_high_0y',
+                        'analyst_eps_range_low_p1y', 'analyst_eps_range_high_p1y',
                         'forward_pe_perc_25', 'forward_pe_perc_50', 'forward_pe_perc_75',
                         'estimated_forward_price_low', 'estimated_forward_price_high',
-                        'peg_ratio'
+                        'peg_ratio',
+                        'analyst_eps_range_avg_0q',
+                        'analyst_eps_range_avg_p1q',
+                        'analyst_eps_range_avg_0y',
+                        'analyst_eps_range_avg_p1y'
                     ]
                     
                     data_to_insert = []
