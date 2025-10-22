@@ -127,6 +127,7 @@ CREATE TABLE default.stock_financial_data
     `analyst_eps_range_high_p1y` Nullable(Float64),
     `analyst_eps_range_avg_p1y` Nullable(Float64),
     `forward_pe_perc_25` Nullable(Float64),
+    `forward_pe_perc_50` Nullable(Float64),
     `forward_pe_perc_75` Nullable(Float64),
     `estimated_forward_price_low` Nullable(Float64),
     `estimated_forward_price_high` Nullable(Float64)
