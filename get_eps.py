@@ -9,6 +9,11 @@ from datetime import date
 import sys
 import numpy as np
 
+# Cache FX rates within a single run to avoid redundant Yahoo Finance lookups.
+FX_RATE_CACHE = {}
+# Normalize all EPS-derived metrics into this currency for consistency.
+TARGET_CURRENCY = "USD"
+
 def clean_data(value):
     """Cleans numpy data types for ClickHouse insertion."""
     if isinstance(value, np.float64):
@@ -16,6 +21,65 @@ def clean_data(value):
             return None
         return float(value)
     return value
+
+def get_fx_rate(from_currency, to_currency):
+    """
+    Returns the FX conversion rate from `from_currency` to `to_currency`.
+    Falls back to 1.0 when currencies match or conversion is unavailable.
+    """
+    if not from_currency or not to_currency or from_currency == to_currency:
+        return 1.0
+
+    cache_key = (from_currency, to_currency)
+    if cache_key in FX_RATE_CACHE:
+        return FX_RATE_CACHE[cache_key]
+
+    currency_pair = f"{from_currency}{to_currency}=X"
+    inverse_pair = f"{to_currency}{from_currency}=X"
+
+    try:
+        ticker = yf.Ticker(currency_pair)
+        history = ticker.history(period="5d")["Close"].dropna()
+        if not history.empty:
+            rate = float(history.iloc[-1])
+            FX_RATE_CACHE[cache_key] = rate
+            return rate
+    except Exception:
+        pass
+
+    try:
+        inverse_ticker = yf.Ticker(inverse_pair)
+        history = inverse_ticker.history(period="5d")["Close"].dropna()
+        if not history.empty:
+            rate = float(history.iloc[-1])
+            if rate != 0:
+                converted_rate = 1.0 / rate
+                FX_RATE_CACHE[cache_key] = converted_rate
+                return converted_rate
+    except Exception:
+        pass
+
+    FX_RATE_CACHE[cache_key] = 1.0
+    return 1.0
+
+def normalize_currency(value, from_currency, to_currency):
+    """
+    Converts a numeric value into the `to_currency` using Yahoo FX rates.
+    """
+    if value is None or pd.isna(value):
+        return None
+
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if not to_currency or not from_currency or from_currency == to_currency:
+        return numeric_value
+
+    rate = get_fx_rate(from_currency, to_currency)
+    # Return float to keep ClickHouse schema consistent.
+    return numeric_value * rate
 
 def get_clickhouse_client(host='192.168.1.36', port=9000, user='default', password=''):
     """Establishes a connection to the ClickHouse database."""
@@ -176,17 +240,19 @@ def get_eps_data(tickers, pe_period="5y"):
         try:
             stock = yf.Ticker(ticker)
             info = stock.info
+            financial_currency = info.get('financialCurrency') or info.get('currency') or TARGET_CURRENCY
             
             pe_min, pe_max = get_historical_pe_range(ticker, period=pe_period)
             
             pe_perc_25, pe_perc_50, pe_perc_75 = get_historical_forward_pe_range_from_clickhouse(client, ticker)
             
             forward_eps = info.get('forwardEps')
+            trailing_eps = info.get('trailingEps')
             estimated_price_low = None
             estimated_price_high = None
-            if forward_eps and pe_perc_25 is not None:
+            if forward_eps is not None and pe_perc_25 is not None:
                 estimated_price_low = forward_eps * pe_perc_25
-            if forward_eps and pe_perc_75 is not None:
+            if forward_eps is not None and pe_perc_75 is not None:
                 estimated_price_high = forward_eps * pe_perc_75
 
             earnings_estimate = stock.earnings_estimate
@@ -195,14 +261,24 @@ def get_eps_data(tickers, pe_period="5y"):
             if earnings_estimate is not None and not earnings_estimate.empty:
                 for period, estimates in earnings_estimate.iterrows():
                     period_name = period.replace('+', 'p')
-                    analyst_estimates[f'analyst_eps_range_low_{period_name}'] = estimates.get('low')
-                    analyst_estimates[f'analyst_eps_range_high_{period_name}'] = estimates.get('high')
-                    analyst_estimates[f'analyst_eps_range_avg_{period_name}'] = estimates.get('avg')
+                    low_estimate = normalize_currency(
+                        estimates.get('low'), financial_currency, TARGET_CURRENCY
+                    )
+                    high_estimate = normalize_currency(
+                        estimates.get('high'), financial_currency, TARGET_CURRENCY
+                    )
+                    avg_estimate = normalize_currency(
+                        estimates.get('avg'), financial_currency, TARGET_CURRENCY
+                    )
+
+                    analyst_estimates[f'analyst_eps_range_low_{period_name}'] = low_estimate
+                    analyst_estimates[f'analyst_eps_range_high_{period_name}'] = high_estimate
+                    analyst_estimates[f'analyst_eps_range_avg_{period_name}'] = avg_estimate
 
             row = {
                 'ticker': ticker,
                 'date': date.today(),
-                'trailing_eps': info.get('trailingEps'),
+                'trailing_eps': trailing_eps,
                 'forward_eps': forward_eps,
                 'trailing_pe': info.get('trailingPE'),
                 'forward_pe': info.get('forwardPE'),
